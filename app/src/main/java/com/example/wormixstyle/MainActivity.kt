@@ -1,40 +1,76 @@
 package com.example.wormixstyle
 
 import android.app.Activity
+import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Typeface
 import android.os.Bundle
-import android.graphics.*
 import android.view.MotionEvent
 import android.view.View
-import kotlin.math.sqrt
+import kotlin.math.max
+import kotlin.math.min
 
 class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(GameView())
+        setContentView(GameView(this))
     }
 
-    inner class GameView : View(this) {
+    class GameView(context: Context) : View(context) {
 
         private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
 
-        private var aimX = 0f
-        private var aimY = 0f
+        private val prefs =
+            context.getSharedPreferences("worm_arena_save", Context.MODE_PRIVATE)
 
-        private var projectileX = 0f
-        private var projectileY = 0f
-        private var projectileVX = 0f
-        private var projectileVY = 0f
-        private var shooting = false
+        private var screen = "menu"
+        private var devMenu = false
+
+        private var selectedCharacter =
+            prefs.getString("character", "БОКСЁР") ?: "БОКСЁР"
+
+        private var level =
+            prefs.getInt("level", 30)
+
+        private var experience =
+            prefs.getLong("experience", 999999L)
+
+        private var rubies =
+            prefs.getLong("rubies", 1_000_000L)
+
+        private var fuzz =
+            prefs.getLong("fuzz", 1_000_000L)
+
+        private var allUnlocked =
+            prefs.getBoolean("allUnlocked", true)
+
+        private var godMode =
+            prefs.getBoolean("godMode", false)
+
+        private var infiniteAmmo =
+            prefs.getBoolean("infiniteAmmo", false)
+
+        private var maxStats =
+            prefs.getBoolean("maxStats", true)
 
         private var playerHealth = 100
-        private var enemyHealth = 100
+        private var botHealth = 100
 
-        private val playerX = 230f
-        private var playerY = 0f
+        private var botNumber = 1
 
-        private var enemyX = 0f
-        private var enemyY = 0f
+        private val characters = arrayOf(
+            "БОКСЁР",
+            "ЗАЯЦ",
+            "ДРАКОН",
+            "КАБАН",
+            "КОТ",
+            "ДЕМОН",
+            "РОБОТ",
+            "ЗОМБИ"
+        )
 
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
@@ -42,185 +78,998 @@ class MainActivity : Activity() {
             val w = width.toFloat()
             val h = height.toFloat()
 
-            // Небо
-            canvas.drawColor(Color.rgb(110, 185, 235))
+            when (screen) {
 
-            // Верхний слой земли
-            paint.color = Color.rgb(80, 165, 70)
-            canvas.drawRect(0f, h * 0.65f, w, h, paint)
-
-            // Нижний слой земли
-            paint.color = Color.rgb(130, 85, 50)
-            canvas.drawRect(0f, h * 0.73f, w, h, paint)
-
-            playerY = h * 0.60f
-            enemyX = w * 0.75f
-            enemyY = h * 0.55f
-
-            // БОКСЁР
-            paint.color = Color.rgb(40, 150, 240)
-            canvas.drawCircle(playerX, playerY, 35f, paint)
-
-            paint.color = Color.WHITE
-            paint.textSize = 18f
-            paint.typeface = Typeface.DEFAULT_BOLD
-            canvas.drawText("БОКСЁР", playerX - 35f, playerY + 60f, paint)
-
-            // ДРАКОН
-            paint.color = Color.rgb(220, 70, 65)
-            canvas.drawCircle(enemyX, enemyY, 35f, paint)
-
-            paint.color = Color.WHITE
-            canvas.drawText("ДРАКОН", enemyX - 35f, enemyY + 60f, paint)
-
-            // Прицел
-            if (aimX > 0f && aimY > 0f) {
-                paint.style = Paint.Style.STROKE
-                paint.strokeWidth = 3f
-                paint.color = Color.WHITE
-
-                canvas.drawCircle(aimX, aimY, 20f, paint)
-                canvas.drawLine(aimX - 30f, aimY, aimX + 30f, aimY, paint)
-                canvas.drawLine(aimX, aimY - 30f, aimX, aimY + 30f, paint)
-
-                paint.style = Paint.Style.FILL
-            }
-
-            // Снаряд
-            if (shooting) {
-                paint.color = Color.YELLOW
-                canvas.drawCircle(projectileX, projectileY, 10f, paint)
-
-                projectileX += projectileVX
-                projectileY += projectileVY
-
-                if (
-                    projectileX > w ||
-                    projectileX < 0f ||
-                    projectileY > h ||
-                    projectileY < 0f
-                ) {
-                    shooting = false
+                "menu" -> {
+                    drawBackground(canvas, w, h)
+                    drawMenu(canvas, w, h)
                 }
 
-                invalidate()
+                "characters" -> {
+                    drawBackground(canvas, w, h)
+                    drawCharacters(canvas, w, h)
+                }
+
+                "battle" -> {
+                    drawBattle(canvas, w, h)
+                }
             }
 
-            // Интерфейс
-            paint.color = Color.WHITE
-            paint.textSize = 28f
-            paint.typeface = Typeface.DEFAULT_BOLD
-
-            canvas.drawText("WORM ARENA", 25f, 40f, paint)
-            canvas.drawText("Уровень 30", 25f, 75f, paint)
-
-            paint.textSize = 20f
-            paint.typeface = Typeface.DEFAULT
-
-            canvas.drawText("Рубины: 999999", 25f, 108f, paint)
-            canvas.drawText("Фузз: 999999", 25f, 138f, paint)
-
-            // Полоска здоровья игрока
-            paint.color = Color.RED
-            canvas.drawRect(
-                playerX - 45f,
-                playerY - 65f,
-                playerX + 45f,
-                playerY - 55f,
-                paint
-            )
-
-            paint.color = Color.GREEN
-            canvas.drawRect(
-                playerX - 45f,
-                playerY - 65f,
-                playerX - 45f + (90f * playerHealth / 100f),
-                playerY - 55f,
-                paint
-            )
-
-            // Полоска здоровья врага
-            paint.color = Color.RED
-            canvas.drawRect(
-                enemyX - 45f,
-                enemyY - 65f,
-                enemyX + 45f,
-                enemyY - 55f,
-                paint
-            )
-
-            paint.color = Color.GREEN
-            canvas.drawRect(
-                enemyX - 45f,
-                enemyY - 65f,
-                enemyX - 45f + (90f * enemyHealth / 100f),
-                enemyY - 55f,
-                paint
-            )
-
-            // Кнопка ОГОНЬ
-            paint.color = Color.rgb(210, 50, 40)
-            canvas.drawRoundRect(
-                w - 190f,
-                h - 100f,
-                w - 30f,
-                h - 30f,
-                20f,
-                20f,
-                paint
-            )
-
-            paint.color = Color.WHITE
-            paint.textSize = 25f
-            paint.typeface = Typeface.DEFAULT_BOLD
-            canvas.drawText("ОГОНЬ", w - 155f, h - 55f, paint)
+            if (devMenu) {
+                drawDevMenu(canvas, w, h)
+            }
         }
 
-        override fun onTouchEvent(event: MotionEvent): Boolean {
+        private fun drawBackground(
+            canvas: Canvas,
+            w: Float,
+            h: Float
+        ) {
 
-            when (event.action) {
+            canvas.drawColor(
+                Color.rgb(105, 180, 230)
+            )
 
-                MotionEvent.ACTION_DOWN,
-                MotionEvent.ACTION_MOVE -> {
-                    aimX = event.x
-                    aimY = event.y
-                    invalidate()
-                    return true
+            // Облака
+
+            paint.color = Color.WHITE
+
+            canvas.drawCircle(
+                w * 0.18f,
+                h * 0.17f,
+                25f,
+                paint
+            )
+
+            canvas.drawCircle(
+                w * 0.22f,
+                h * 0.17f,
+                35f,
+                paint
+            )
+
+            canvas.drawCircle(
+                w * 0.27f,
+                h * 0.17f,
+                23f,
+                paint
+            )
+
+            // Земля
+
+            paint.color = Color.rgb(75, 160, 70)
+
+            canvas.drawRect(
+                0f,
+                h * 0.65f,
+                w,
+                h,
+                paint
+            )
+
+            paint.color = Color.rgb(130, 85, 50)
+
+            canvas.drawRect(
+                0f,
+                h * 0.73f,
+                w,
+                h,
+                paint
+            )
+        }
+
+        private fun drawMenu(
+            canvas: Canvas,
+            w: Float,
+            h: Float
+        ) {
+
+            text(
+                canvas,
+                "WORM ARENA",
+                35f,
+                55f,
+                36f,
+                Color.WHITE
+            )
+
+            text(
+                canvas,
+                "LOCAL TEST SERVER",
+                35f,
+                88f,
+                21f,
+                Color.YELLOW
+            )
+
+            text(
+                canvas,
+                "Уровень: $level",
+                35f,
+                122f,
+                20f
+            )
+
+            text(
+                canvas,
+                "Опыт: $experience",
+                35f,
+                150f,
+                18f
+            )
+
+            text(
+                canvas,
+                "Рубины: $rubies",
+                35f,
+                178f,
+                18f
+            )
+
+            text(
+                canvas,
+                "Фузз: $fuzz",
+                35f,
+                206f,
+                18f
+            )
+
+            button(
+                canvas,
+                "НАЧАТЬ БОЙ",
+                35f,
+                240f,
+                w * 0.48f,
+                300f
+            )
+
+            button(
+                canvas,
+                "ПЕРСОНАЖИ",
+                35f,
+                315f,
+                w * 0.48f,
+                375f
+            )
+
+            button(
+                canvas,
+                "DEV MENU",
+                w - 220f,
+                35f,
+                w - 35f,
+                92f
+            )
+
+            text(
+                canvas,
+                "Выбран: $selectedCharacter",
+                35f,
+                h - 45f,
+                22f,
+                Color.WHITE
+            )
+        }
+
+        private fun drawCharacters(
+            canvas: Canvas,
+            w: Float,
+            h: Float
+        ) {
+
+            text(
+                canvas,
+                "ВЫБОР ПЕРСОНАЖА",
+                35f,
+                50f,
+                31f,
+                Color.WHITE
+            )
+
+            val columns = 4
+
+            val cellWidth =
+                (w - 90f) / columns
+
+            for (i in characters.indices) {
+
+                val column = i % columns
+                val row = i / columns
+
+                val left =
+                    25f + column * cellWidth
+
+                val top =
+                    85f + row * 105f
+
+                val right =
+                    left + cellWidth - 10f
+
+                val bottom =
+                    top + 82f
+
+                if (characters[i] == selectedCharacter) {
+
+                    paint.color =
+                        Color.rgb(25, 135, 80)
+
+                } else {
+
+                    paint.color =
+                        Color.rgb(45, 55, 70)
                 }
 
-                MotionEvent.ACTION_UP -> {
+                canvas.drawRoundRect(
+                    left,
+                    top,
+                    right,
+                    bottom,
+                    14f,
+                    14f,
+                    paint
+                )
 
-                    val w = width.toFloat()
-                    val h = height.toFloat()
+                text(
+                    canvas,
+                    characters[i],
+                    left + 12f,
+                    top + 48f,
+                    18f,
+                    Color.WHITE
+                )
+            }
 
-                    // Нажата кнопка ОГОНЬ
-                    if (
-                        event.x > w - 210f &&
-                        event.y > h - 120f
-                    ) {
+            button(
+                canvas,
+                "НАЗАД",
+                25f,
+                h - 70f,
+                180f,
+                h - 20f
+            )
+        }
 
-                        val dx = aimX - playerX
-                        val dy = aimY - playerY
-                        val distance = sqrt(dx * dx + dy * dy)
+        private fun drawBattle(
+            canvas: Canvas,
+            w: Float,
+            h: Float
+        ) {
 
-                        if (distance > 10f) {
+            // Небо
 
-                            val speed = 18f
+            canvas.drawColor(
+                Color.rgb(105, 180, 230)
+            )
 
-                            projectileX = playerX
-                            projectileY = playerY
+            // Земля
 
-                            projectileVX = dx / distance * speed
-                            projectileVY = dy / distance * speed
+            paint.color =
+                Color.rgb(75, 160, 70)
 
-                            shooting = true
-                            invalidate()
-                        }
+            canvas.drawRect(
+                0f,
+                h * 0.64f,
+                w,
+                h,
+                paint
+            )
+
+            paint.color =
+                Color.rgb(130, 85, 50)
+
+            canvas.drawRect(
+                0f,
+                h * 0.72f,
+                w,
+                h,
+                paint
+            )
+
+            // Верхний интерфейс
+
+            text(
+                canvas,
+                "LOCAL TEST SERVER",
+                25f,
+                38f,
+                22f,
+                Color.YELLOW
+            )
+
+            text(
+                canvas,
+                "БОЙ ПРОТИВ БОТА #$botNumber",
+                25f,
+                68f,
+                19f
+            )
+
+            // Игрок
+
+            val playerX = w * 0.25f
+            val playerY = h * 0.59f
+
+            paint.color =
+                Color.rgb(40, 150, 240)
+
+            canvas.drawCircle(
+                playerX,
+                playerY,
+                35f,
+                paint
+            )
+
+            text(
+                canvas,
+                selectedCharacter,
+                playerX - 50f,
+                playerY + 60f,
+                16f
+            )
+
+            // Бот
+
+            val botX = w * 0.75f
+            val botY = h * 0.54f
+
+            paint.color =
+                Color.rgb(220, 70, 65)
+
+            canvas.drawCircle(
+                botX,
+                botY,
+                35f,
+                paint
+            )
+
+            text(
+                canvas,
+                "ТЕСТ-БОТ",
+                botX - 45f,
+                botY + 60f,
+                16f
+            )
+
+            // Здоровье игрока
+
+            drawHealthBar(
+                canvas,
+                playerX - 55f,
+                playerY - 65f,
+                playerHealth
+            )
+
+            // Здоровье бота
+
+            drawHealthBar(
+                canvas,
+                botX - 55f,
+                botY - 65f,
+                botHealth
+            )
+
+            // Информация
+
+            text(
+                canvas,
+                "HP: $playerHealth/100",
+                25f,
+                h - 105f,
+                18f
+            )
+
+            text(
+                canvas,
+                if (godMode)
+                    "БЕССМЕРТИЕ"
+                else
+                    "ОБЫЧНЫЙ РЕЖИМ",
+                25f,
+                h - 78f,
+                17f,
+                if (godMode)
+                    Color.YELLOW
+                else
+                    Color.WHITE
+            )
+
+            // Кнопки
+
+            button(
+                canvas,
+                "НАЗАД",
+                25f,
+                h - 60f,
+                170f,
+                h - 15f
+            )
+
+            button(
+                canvas,
+                "DEV",
+                w - 160f,
+                h - 60f,
+                w - 25f,
+                h - 15f
+            )
+        }
+
+        private fun drawHealthBar(
+            canvas: Canvas,
+            x: Float,
+            y: Float,
+            health: Int
+        ) {
+
+            paint.color = Color.RED
+
+            canvas.drawRect(
+                x,
+                y,
+                x + 110f,
+                y + 12f,
+                paint
+            )
+
+            paint.color = Color.GREEN
+
+            val width =
+                110f * (health.coerceIn(0, 100) / 100f)
+
+            canvas.drawRect(
+                x,
+                y,
+                x + width,
+                y + 12f,
+                paint
+            )
+        }
+
+        private fun drawDevMenu(
+            canvas: Canvas,
+            w: Float,
+            h: Float
+        ) {
+
+            paint.color =
+                Color.argb(
+                    235,
+                    15,
+                    20,
+                    30
+                )
+
+            canvas.drawRect(
+                0f,
+                0f,
+                w,
+                h,
+                paint
+            )
+
+            text(
+                canvas,
+                "DEV MENU",
+                35f,
+                48f,
+                32f,
+                Color.YELLOW
+            )
+
+            text(
+                canvas,
+                "LOCAL TEST SERVER",
+                35f,
+                78f,
+                17f,
+                Color.WHITE
+            )
+
+            val left = 30f
+            val right = w / 2f + 10f
+
+            val buttonWidth =
+                w / 2f - 45f
+
+            val buttonHeight = 52f
+
+            val rows = floatArrayOf(
+                105f,
+                170f,
+                235f,
+                300f,
+                365f,
+                430f
+            )
+
+            button(
+                canvas,
+                "+1 000 000 РУБИНОВ",
+                left,
+                rows[0],
+                left + buttonWidth,
+                rows[0] + buttonHeight
+            )
+
+            button(
+                canvas,
+                "+1 000 000 ФУЗЗ",
+                right,
+                rows[0],
+                right + buttonWidth,
+                rows[0] + buttonHeight
+            )
+
+            button(
+                canvas,
+                "УРОВЕНЬ 30",
+                left,
+                rows[1],
+                left + buttonWidth,
+                rows[1] + buttonHeight
+            )
+
+            button(
+                canvas,
+                "ОТКРЫТЬ ВСЁ",
+                right,
+                rows[1],
+                right + buttonWidth,
+                rows[1] + buttonHeight
+            )
+
+            button(
+                canvas,
+                if (godMode)
+                    "БЕССМЕРТИЕ: ВКЛ"
+                else
+                    "БЕССМЕРТИЕ: ВЫКЛ",
+                left,
+                rows[2],
+                left + buttonWidth,
+                rows[2] + buttonHeight
+            )
+
+            button(
+                canvas,
+                if (infiniteAmmo)
+                    "БОЕПРИПАСЫ: ВКЛ"
+                else
+                    "БОЕПРИПАСЫ: ВЫКЛ",
+                right,
+                rows[2],
+                right + buttonWidth,
+                rows[2] + buttonHeight
+            )
+
+            button(
+                canvas,
+                if (maxStats)
+                    "ХАРАКТЕРИСТИКИ: MAX"
+                else
+                    "ХАРАКТЕРИСТИКИ: NORMAL",
+                left,
+                rows[3],
+                left + buttonWidth,
+                rows[3] + buttonHeight
+            )
+
+            button(
+                canvas,
+                "ВОССТАНОВИТЬ HP",
+                right,
+                rows[3],
+                right + buttonWidth,
+                rows[3] + buttonHeight
+            )
+
+            button(
+                canvas,
+                "СБРОСИТЬ БОЙ",
+                left,
+                rows[4],
+                left + buttonWidth,
+                rows[4] + buttonHeight
+            )
+
+            button(
+                canvas,
+                "НОВЫЙ ТЕСТ-БОТ",
+                right,
+                rows[4],
+                right + buttonWidth,
+                rows[4] + buttonHeight
+            )
+
+            button(
+                canvas,
+                "ЗАКРЫТЬ",
+                w / 2f - 90f,
+                rows[5],
+                w / 2f + 90f,
+                rows[5] + buttonHeight
+            )
+        }
+
+        private fun text(
+            canvas: Canvas,
+            value: String,
+            x: Float,
+            y: Float,
+            size: Float,
+            color: Int = Color.WHITE
+        ) {
+
+            paint.style = Paint.Style.FILL
+            paint.color = color
+            paint.textSize = size
+            paint.typeface = Typeface.DEFAULT_BOLD
+
+            canvas.drawText(
+                value,
+                x,
+                y,
+                paint
+            )
+        }
+
+        private fun button(
+            canvas: Canvas,
+            label: String,
+            left: Float,
+            top: Float,
+            right: Float,
+            bottom: Float
+        ) {
+
+            paint.style = Paint.Style.FILL
+
+            paint.color =
+                Color.rgb(45, 55, 70)
+
+            canvas.drawRoundRect(
+                left,
+                top,
+                right,
+                bottom,
+                18f,
+                18f,
+                paint
+            )
+
+            text(
+                canvas,
+                label,
+                left + 18f,
+                top + (bottom - top) * 0.65f,
+                21f,
+                Color.WHITE
+            )
+        }
+
+        private fun save() {
+
+            prefs.edit()
+                .putString(
+                    "character",
+                    selectedCharacter
+                )
+                .putInt(
+                    "level",
+                    level
+                )
+                .putLong(
+                    "experience",
+                    experience
+                )
+                .putLong(
+                    "rubies",
+                    rubies
+                )
+                .putLong(
+                    "fuzz",
+                    fuzz
+                )
+                .putBoolean(
+                    "allUnlocked",
+                    allUnlocked
+                )
+                .putBoolean(
+                    "godMode",
+                    godMode
+                )
+                .putBoolean(
+                    "infiniteAmmo",
+                    infiniteAmmo
+                )
+                .putBoolean(
+                    "maxStats",
+                    maxStats
+                )
+                .apply()
+        }
+
+        override fun onTouchEvent(
+            event: MotionEvent
+        ): Boolean {
+
+            if (event.action != MotionEvent.ACTION_UP) {
+                return true
+            }
+
+            val x = event.x
+            val y = event.y
+
+            val w = width.toFloat()
+            val h = height.toFloat()
+
+            /*
+             * DEV MENU
+             */
+
+            if (devMenu) {
+
+                val left = 30f
+                val right = w / 2f + 10f
+
+                val buttonWidth =
+                    w / 2f - 45f
+
+                val buttonHeight = 52f
+
+                val rows = floatArrayOf(
+                    105f,
+                    170f,
+                    235f,
+                    300f,
+                    365f,
+                    430f
+                )
+
+                when {
+
+                    // + рубины
+
+                    y >= rows[0] &&
+                            y <= rows[0] + buttonHeight &&
+                            x >= left &&
+                            x <= left + buttonWidth -> {
+
+                        rubies += 1_000_000L
                     }
 
-                    return true
+                    // + фузз
+
+                    y >= rows[0] &&
+                            y <= rows[0] + buttonHeight &&
+                            x >= right &&
+                            x <= right + buttonWidth -> {
+
+                        fuzz += 1_000_000L
+                    }
+
+                    // уровень
+
+                    y >= rows[1] &&
+                            y <= rows[1] + buttonHeight &&
+                            x >= left &&
+                            x <= left + buttonWidth -> {
+
+                        level = 30
+                        experience = 999999L
+                    }
+
+                    // открыть всё
+
+                    y >= rows[1] &&
+                            y <= rows[1] + buttonHeight &&
+                            x >= right &&
+                            x <= right + buttonWidth -> {
+
+                        allUnlocked = true
+                    }
+
+                    // бессмертие
+
+                    y >= rows[2] &&
+                            y <= rows[2] + buttonHeight &&
+                            x >= left &&
+                            x <= left + buttonWidth -> {
+
+                        godMode = !godMode
+                    }
+
+                    // бесконечные патроны
+
+                    y >= rows[2] &&
+                            y <= rows[2] + buttonHeight &&
+                            x >= right &&
+                            x <= right + buttonWidth -> {
+
+                        infiniteAmmo = !infiniteAmmo
+                    }
+
+                    // характеристики
+
+                    y >= rows[3] &&
+                            y <= rows[3] + buttonHeight &&
+                            x >= left &&
+                            x <= left + buttonWidth -> {
+
+                        maxStats = !maxStats
+                    }
+
+                    // здоровье
+
+                    y >= rows[3] &&
+                            y <= rows[3] + buttonHeight &&
+                            x >= right &&
+                            x <= right + buttonWidth -> {
+
+                        playerHealth = 100
+                        botHealth = 100
+                    }
+
+                    // сброс боя
+
+                    y >= rows[4] &&
+                            y <= rows[4] + buttonHeight &&
+                            x >= left &&
+                            x <= left + buttonWidth -> {
+
+                        playerHealth = 100
+                        botHealth = 100
+                    }
+
+                    // новый бот
+
+                    y >= rows[4] &&
+                            y <= rows[4] + buttonHeight &&
+                            x >= right &&
+                            x <= right + buttonWidth -> {
+
+                        botNumber++
+                        playerHealth = 100
+                        botHealth = 100
+                    }
+
+                    // закрыть
+
+                    y >= rows[5] &&
+                            y <= rows[5] + buttonHeight -> {
+
+                        devMenu = false
+                    }
+                }
+
+                save()
+                invalidate()
+
+                return true
+            }
+
+            /*
+             * ОСНОВНЫЕ ЭКРАНЫ
+             */
+
+            when (screen) {
+
+                "menu" -> {
+
+                    // DEV MENU
+
+                    if (
+                        x > w - 230f &&
+                        y < 115f
+                    ) {
+
+                        devMenu = true
+                    }
+
+                    // Начать бой
+
+                    else if (
+                        y >= 230f &&
+                        y <= 310f
+                    ) {
+
+                        playerHealth = 100
+                        botHealth = 100
+
+                        screen = "battle"
+                    }
+
+                    // Персонажи
+
+                    else if (
+                        y >= 310f &&
+                        y <= 390f
+                    ) {
+
+                        screen = "characters"
+                    }
+                }
+
+                "characters" -> {
+
+                    // Назад
+
+                    if (
+                        y > h - 90f
+                    ) {
+
+                        screen = "menu"
+                    }
+
+                    // Выбор персонажа
+
+                    else if (
+                        y >= 85f &&
+                        y < 300f
+                    ) {
+
+                        val cellWidth =
+                            (w - 90f) / 4f
+
+                        val column =
+                            min(
+                                3,
+                                max(
+                                    0,
+                                    ((x - 25f) / cellWidth).toInt()
+                                )
+                            )
+
+                        val row =
+                            min(
+                                1,
+                                max(
+                                    0,
+                                    ((y - 85f) / 105f).toInt()
+                                )
+                            )
+
+                        val index =
+                            row * 4 + column
+
+                        if (
+                            index >= 0 &&
+                            index < characters.size
+                        ) {
+
+                            selectedCharacter =
+                                characters[index]
+
+                            save()
+                        }
+                    }
+                }
+
+                "battle" -> {
+
+                    // DEV в бою
+
+                    if (
+                        x > w - 180f &&
+                        y > h - 90f
+                    ) {
+
+                        devMenu = true
+                    }
+
+                    // Назад
+
+                    else if (
+                        x < 200f &&
+                        y > h - 90f
+                    ) {
+
+                        screen = "menu"
+                    }
                 }
             }
+
+            invalidate()
 
             return true
         }
