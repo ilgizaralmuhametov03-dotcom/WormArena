@@ -5,6 +5,9 @@ import android.os.Bundle
 import android.graphics.*
 import android.view.MotionEvent
 import android.view.View
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
 
 class MainActivity : Activity() {
 
@@ -16,6 +19,23 @@ class MainActivity : Activity() {
     inner class GameView : View(this) {
 
         private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+        private var aimX = 0f
+        private var aimY = 0f
+        private var projectileX = 0f
+        private var projectileY = 0f
+        private var projectileVX = 0f
+        private var projectileVY = 0f
+        private var shooting = false
+
+        private var playerHealth = 100
+        private var enemyHealth = 100
+
+        private val playerX = 230f
+        private var playerY = 0f
+
+        private var enemyX = 0f
+        private var enemyY = 0f
 
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
@@ -30,19 +50,62 @@ class MainActivity : Activity() {
             paint.color = Color.rgb(80, 165, 70)
             canvas.drawRect(0f, h * 0.65f, w, h, paint)
 
-            // Земля под поверхностью
             paint.color = Color.rgb(130, 85, 50)
             canvas.drawRect(0f, h * 0.73f, w, h, paint)
 
-            // Игрок
-            paint.color = Color.rgb(65, 180, 65)
-            canvas.drawCircle(w * 0.25f, h * 0.60f, 35f, paint)
+            playerY = h * 0.60f
+            enemyX = w * 0.75f
+            enemyY = h * 0.55f
 
-            // Враг
+            // Игрок — боксёр
+            paint.color = Color.rgb(40, 150, 240)
+            canvas.drawCircle(playerX, playerY, 35f, paint)
+
+            paint.color = Color.WHITE
+            paint.textSize = 18f
+            paint.typeface = Typeface.DEFAULT_BOLD
+            canvas.drawText("БОКСЁР", playerX - 35f, playerY + 60f, paint)
+
+            // Враг — дракон
             paint.color = Color.rgb(220, 70, 65)
-            canvas.drawCircle(w * 0.75f, h * 0.55f, 35f, paint)
+            canvas.drawCircle(enemyX, enemyY, 35f, paint)
 
-            // Интерфейс
+            paint.color = Color.WHITE
+            canvas.drawText("ДРАКОН", enemyX - 35f, enemyY + 60f, paint)
+
+            // Прицел
+            if (aimX > 0 && aimY > 0) {
+                paint.style = Paint.Style.STROKE
+                paint.strokeWidth = 3f
+                paint.color = Color.WHITE
+
+                canvas.drawCircle(aimX, aimY, 20f, paint)
+                canvas.drawLine(aimX - 30f, aimY, aimX + 30f, aimY, paint)
+                canvas.drawLine(aimX, aimY - 30f, aimX, aimY + 30f, paint)
+
+                paint.style = Paint.Style.FILL
+            }
+
+            // Снаряд
+            if (shooting) {
+                paint.color = Color.YELLOW
+                canvas.drawCircle(projectileX, projectileY, 10f, paint)
+
+                projectileX += projectileVX
+                projectileY += projectileVY
+
+                if (projectileX > w ||
+                    projectileX < 0 ||
+                    projectileY > h ||
+                    projectileY < 0
+                ) {
+                    shooting = false
+                }
+
+                invalidate()
+            }
+
+            // Верхняя панель
             paint.color = Color.WHITE
             paint.textSize = 28f
             paint.typeface = Typeface.DEFAULT_BOLD
@@ -50,24 +113,32 @@ class MainActivity : Activity() {
             canvas.drawText("WORM ARENA", 25f, 40f, paint)
             canvas.drawText("Уровень 30", 25f, 75f, paint)
 
-            paint.textSize = 21f
+            paint.textSize = 20f
             paint.typeface = Typeface.DEFAULT
 
-            canvas.drawText("Рубины: 999999", 25f, 108f, paint)
-            canvas.drawText("Фузз: 999999", 25f, 138f, paint)
-            canvas.drawText("Все способности открыты", 25f, 168f, paint)
+            canvas.drawText("💎 Рубины: 999999", 25f, 108f, paint)
+            canvas.drawText("⚡ Фузз: 999999", 25f, 138f, paint)
 
-            paint.textSize = 18f
-            canvas.drawText(
-                "Коснись экрана для прицеливания",
-                25f,
-                h - 25f,
+            // Здоровье
+            paint.color = Color.RED
+            canvas.drawRect(
+                playerX - 45f,
+                playerY - 65f,
+                playerX + 45f,
+                playerY - 55f,
                 paint
             )
-        }
 
-        override fun onTouchEvent(event: MotionEvent): Boolean {
-            return true
-        }
-    }
-}
+            paint.color = Color.GREEN
+            canvas.drawRect(
+                playerX - 45f,
+                playerY - 65f,
+                playerX - 45f + 90f * playerHealth / 100f,
+                playerY - 55f,
+                paint
+            )
+
+            paint.color = Color.RED
+            canvas.drawRect(
+                enemyX - 45f,
+                enemyY - 65
