@@ -5,9 +5,7 @@ import android.os.Bundle
 import android.graphics.*
 import android.view.MotionEvent
 import android.view.View
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.sin
+import kotlin.math.sqrt
 
 class MainActivity : Activity() {
 
@@ -22,6 +20,7 @@ class MainActivity : Activity() {
 
         private var aimX = 0f
         private var aimY = 0f
+
         private var projectileX = 0f
         private var projectileY = 0f
         private var projectileVX = 0f
@@ -46,10 +45,11 @@ class MainActivity : Activity() {
             // Небо
             canvas.drawColor(Color.rgb(110, 185, 235))
 
-            // Земля
+            // Верхний слой земли
             paint.color = Color.rgb(80, 165, 70)
             canvas.drawRect(0f, h * 0.65f, w, h, paint)
 
+            // Нижний слой земли
             paint.color = Color.rgb(130, 85, 50)
             canvas.drawRect(0f, h * 0.73f, w, h, paint)
 
@@ -57,7 +57,7 @@ class MainActivity : Activity() {
             enemyX = w * 0.75f
             enemyY = h * 0.55f
 
-            // Игрок — боксёр
+            // БОКСЁР
             paint.color = Color.rgb(40, 150, 240)
             canvas.drawCircle(playerX, playerY, 35f, paint)
 
@@ -66,7 +66,7 @@ class MainActivity : Activity() {
             paint.typeface = Typeface.DEFAULT_BOLD
             canvas.drawText("БОКСЁР", playerX - 35f, playerY + 60f, paint)
 
-            // Враг — дракон
+            // ДРАКОН
             paint.color = Color.rgb(220, 70, 65)
             canvas.drawCircle(enemyX, enemyY, 35f, paint)
 
@@ -74,7 +74,7 @@ class MainActivity : Activity() {
             canvas.drawText("ДРАКОН", enemyX - 35f, enemyY + 60f, paint)
 
             // Прицел
-            if (aimX > 0 && aimY > 0) {
+            if (aimX > 0f && aimY > 0f) {
                 paint.style = Paint.Style.STROKE
                 paint.strokeWidth = 3f
                 paint.color = Color.WHITE
@@ -94,10 +94,11 @@ class MainActivity : Activity() {
                 projectileX += projectileVX
                 projectileY += projectileVY
 
-                if (projectileX > w ||
-                    projectileX < 0 ||
+                if (
+                    projectileX > w ||
+                    projectileX < 0f ||
                     projectileY > h ||
-                    projectileY < 0
+                    projectileY < 0f
                 ) {
                     shooting = false
                 }
@@ -105,7 +106,7 @@ class MainActivity : Activity() {
                 invalidate()
             }
 
-            // Верхняя панель
+            // Интерфейс
             paint.color = Color.WHITE
             paint.textSize = 28f
             paint.typeface = Typeface.DEFAULT_BOLD
@@ -116,10 +117,10 @@ class MainActivity : Activity() {
             paint.textSize = 20f
             paint.typeface = Typeface.DEFAULT
 
-            canvas.drawText("💎 Рубины: 999999", 25f, 108f, paint)
-            canvas.drawText("⚡ Фузз: 999999", 25f, 138f, paint)
+            canvas.drawText("Рубины: 999999", 25f, 108f, paint)
+            canvas.drawText("Фузз: 999999", 25f, 138f, paint)
 
-            // Здоровье
+            // Полоска здоровья игрока
             paint.color = Color.RED
             canvas.drawRect(
                 playerX - 45f,
@@ -133,12 +134,95 @@ class MainActivity : Activity() {
             canvas.drawRect(
                 playerX - 45f,
                 playerY - 65f,
-                playerX - 45f + 90f * playerHealth / 100f,
+                playerX - 45f + (90f * playerHealth / 100f),
                 playerY - 55f,
                 paint
             )
 
+            // Полоска здоровья врага
             paint.color = Color.RED
             canvas.drawRect(
                 enemyX - 45f,
-                enemyY - 65
+                enemyY - 65f,
+                enemyX + 45f,
+                enemyY - 55f,
+                paint
+            )
+
+            paint.color = Color.GREEN
+            canvas.drawRect(
+                enemyX - 45f,
+                enemyY - 65f,
+                enemyX - 45f + (90f * enemyHealth / 100f),
+                enemyY - 55f,
+                paint
+            )
+
+            // Кнопка ОГОНЬ
+            paint.color = Color.rgb(210, 50, 40)
+            canvas.drawRoundRect(
+                w - 190f,
+                h - 100f,
+                w - 30f,
+                h - 30f,
+                20f,
+                20f,
+                paint
+            )
+
+            paint.color = Color.WHITE
+            paint.textSize = 25f
+            paint.typeface = Typeface.DEFAULT_BOLD
+            canvas.drawText("ОГОНЬ", w - 155f, h - 55f, paint)
+        }
+
+        override fun onTouchEvent(event: MotionEvent): Boolean {
+
+            when (event.action) {
+
+                MotionEvent.ACTION_DOWN,
+                MotionEvent.ACTION_MOVE -> {
+                    aimX = event.x
+                    aimY = event.y
+                    invalidate()
+                    return true
+                }
+
+                MotionEvent.ACTION_UP -> {
+
+                    val w = width.toFloat()
+                    val h = height.toFloat()
+
+                    // Нажата кнопка ОГОНЬ
+                    if (
+                        event.x > w - 210f &&
+                        event.y > h - 120f
+                    ) {
+
+                        val dx = aimX - playerX
+                        val dy = aimY - playerY
+                        val distance = sqrt(dx * dx + dy * dy)
+
+                        if (distance > 10f) {
+
+                            val speed = 18f
+
+                            projectileX = playerX
+                            projectileY = playerY
+
+                            projectileVX = dx / distance * speed
+                            projectileVY = dy / distance * speed
+
+                            shooting = true
+                            invalidate()
+                        }
+                    }
+
+                    return true
+                }
+            }
+
+            return true
+        }
+    }
+}
