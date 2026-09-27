@@ -1,3 +1,97 @@
+package com.example.wormixstyle
+
+import android.app.Activity
+import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Typeface
+import android.os.Bundle
+import android.view.MotionEvent
+import android.view.View
+import kotlin.math.cos
+import kotlin.math.hypot
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.sin
+
+class MainActivity : Activity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(GameView(this))
+    }
+
+    class GameView(context: Context) : View(context) {
+
+        private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+        private val prefs =
+            context.getSharedPreferences("worm_arena_save", Context.MODE_PRIVATE)
+
+        private var screen = "menu"
+        private var devMenu = false
+
+        private var selectedCharacter =
+            prefs.getString("character", "БОКСЁР") ?: "БОКСЁР"
+
+        private var level =
+            prefs.getInt("level", 30)
+
+        private var experience =
+            prefs.getLong("experience", 999999L)
+
+        private var rubies =
+            prefs.getLong("rubies", 1_000_000L)
+
+        private var fuzz =
+            prefs.getLong("fuzz", 1_000_000L)
+
+        private var allUnlocked =
+            prefs.getBoolean("allUnlocked", true)
+
+        private var godMode =
+            prefs.getBoolean("godMode", false)
+
+        private var infiniteAmmo =
+            prefs.getBoolean("infiniteAmmo", false)
+
+        private var maxStats =
+            prefs.getBoolean("maxStats", true)
+
+        private var playerHealth = 100
+        private var botHealth = 100
+
+        private var botNumber = 1
+
+        private var playerTurn = true
+        private var projectileFlying = false
+
+        private var projectileX = 0f
+        private var projectileY = 0f
+        private var projectileVX = 0f
+        private var projectileVY = 0f
+
+        private var aimAngle = 35f
+        private var power = 55f
+
+        private var explosionX = 0f
+        private var explosionY = 0f
+        private var explosionRadius = 0f
+        private var explosionTimer = 0
+
+        private var message = "ТВОЙ ХОД"
+
+        private var lastTime = System.currentTimeMillis()
+
+        private val characters = arrayOf(
+            "БОКСЁР",
+            "ЗАЯЦ",
+            "ДРАКОН",
+            "КАБАН",
+            "КОТ",
+            "ДЕМОН",
+            "РОБОТ",
             "ЗОМБИ"
         )
 
@@ -8,7 +102,6 @@
             val h = height.toFloat()
 
             when (screen) {
-
                 "menu" -> {
                     drawBackground(canvas, w, h)
                     drawMenu(canvas, w, h)
@@ -34,12 +127,7 @@
             w: Float,
             h: Float
         ) {
-
-            canvas.drawColor(
-                Color.rgb(105, 180, 230)
-            )
-
-            // Облака
+            canvas.drawColor(Color.rgb(105, 180, 230))
 
             paint.color = Color.WHITE
 
@@ -63,8 +151,6 @@
                 23f,
                 paint
             )
-
-            // Земля
 
             paint.color = Color.rgb(75, 160, 70)
 
@@ -92,7 +178,6 @@
             w: Float,
             h: Float
         ) {
-
             text(
                 canvas,
                 "WORM ARENA",
@@ -185,7 +270,6 @@
             w: Float,
             h: Float
         ) {
-
             text(
                 canvas,
                 "ВЫБОР ПЕРСОНАЖА",
@@ -196,37 +280,24 @@
             )
 
             val columns = 4
-
-            val cellWidth =
-                (w - 90f) / columns
+            val cellWidth = (w - 90f) / columns
 
             for (i in characters.indices) {
 
                 val column = i % columns
                 val row = i / columns
 
-                val left =
-                    25f + column * cellWidth
+                val left = 25f + column * cellWidth
+                val top = 85f + row * 105f
+                val right = left + cellWidth - 10f
+                val bottom = top + 82f
 
-                val top =
-                    85f + row * 105f
-
-                val right =
-                    left + cellWidth - 10f
-
-                val bottom =
-                    top + 82f
-
-                if (characters[i] == selectedCharacter) {
-
-                    paint.color =
+                paint.color =
+                    if (characters[i] == selectedCharacter) {
                         Color.rgb(25, 135, 80)
-
-                } else {
-
-                    paint.color =
+                    } else {
                         Color.rgb(45, 55, 70)
-                }
+                    }
 
                 canvas.drawRoundRect(
                     left,
@@ -263,14 +334,9 @@
             w: Float,
             h: Float
         ) {
-
-            // Небо
-
             canvas.drawColor(
                 Color.rgb(105, 180, 230)
             )
-
-            // Земля
 
             paint.color =
                 Color.rgb(75, 160, 70)
@@ -294,14 +360,12 @@
                 paint
             )
 
-            // Верхний интерфейс
-
             text(
                 canvas,
                 "LOCAL TEST SERVER",
                 25f,
-                38f,
-                22f,
+                34f,
+                19f,
                 Color.YELLOW
             )
 
@@ -309,17 +373,40 @@
                 canvas,
                 "БОЙ ПРОТИВ БОТА #$botNumber",
                 25f,
-                68f,
-                19f
+                62f,
+                18f
             )
 
-            // Игрок
+            text(
+                canvas,
+                message,
+                w / 2f - 70f,
+                45f,
+                22f,
+                Color.YELLOW
+            )
 
-            val playerX = w * 0.25f
+            val playerX = w * 0.20f
             val playerY = h * 0.59f
 
-            paint.color =
-                Color.rgb(40, 150, 240)
+            val botX = w * 0.80f
+            val botY = h * 0.54f
+
+            drawHealthBar(
+                canvas,
+                playerX - 55f,
+                playerY - 65f,
+                playerHealth
+            )
+
+            drawHealthBar(
+                canvas,
+                botX - 55f,
+                botY - 65f,
+                botHealth
+            )
+
+            paint.color = Color.rgb(40, 150, 240)
 
             canvas.drawCircle(
                 playerX,
@@ -328,21 +415,7 @@
                 paint
             )
 
-            text(
-                canvas,
-                selectedCharacter,
-                playerX - 50f,
-                playerY + 60f,
-                16f
-            )
-
-            // Бот
-
-            val botX = w * 0.75f
-            val botY = h * 0.54f
-
-            paint.color =
-                Color.rgb(220, 70, 65)
+            paint.color = Color.rgb(220, 70, 65)
 
             canvas.drawCircle(
                 botX,
@@ -353,74 +426,419 @@
 
             text(
                 canvas,
+                selectedCharacter,
+                playerX - 50f,
+                playerY + 60f,
+                15f
+            )
+
+            text(
+                canvas,
                 "ТЕСТ-БОТ",
                 botX - 45f,
                 botY + 60f,
-                16f
+                15f
             )
 
-            // Здоровье игрока
+            if (playerTurn && !projectileFlying) {
 
-            drawHealthBar(
+                drawAim(
+                    canvas,
+                    playerX,
+                    playerY
+                )
+
+                text(
+                    canvas,
+                    "УГОЛ: ${aimAngle.toInt()}°",
+                    25f,
+                    h - 135f,
+                    17f
+                )
+
+                text(
+                    canvas,
+                    "СИЛА: ${power.toInt()}%",
+                    25f,
+                    h - 108f,
+                    17f
+                )
+
+                button(
+                    canvas,
+                    "ОГОНЬ",
+                    w - 190f,
+                    h - 80f,
+                    w - 25f,
+                    h - 25f
+                )
+            }
+
+            button(
                 canvas,
-                playerX - 55f,
-                playerY - 65f,
-                playerHealth
+                "DEV",
+                w - 155f,
+                15f,
+                w - 25f,
+                62f
             )
-
-            // Здоровье бота
-
-            drawHealthBar(
-                canvas,
-                botX - 55f,
-                botY - 65f,
-                botHealth
-            )
-
-            // Информация
-
-            text(
-                canvas,
-                "HP: $playerHealth/100",
-                25f,
-                h - 105f,
-                18f
-            )
-
-            text(
-                canvas,
-                if (godMode)
-                    "БЕССМЕРТИЕ"
-                else
-                    "ОБЫЧНЫЙ РЕЖИМ",
-                25f,
-                h - 78f,
-                17f,
-                if (godMode)
-                    Color.YELLOW
-                else
-                    Color.WHITE
-            )
-
-            // Кнопки
 
             button(
                 canvas,
                 "НАЗАД",
                 25f,
-                h - 60f,
-                170f,
-                h - 15f
+                h - 70f,
+                165f,
+                h - 20f
             )
 
-            button(
-                canvas,
-                "DEV",
-                w - 160f,
-                h - 60f,
-                w - 25f,
-                h - 15f
+            if (explosionTimer > 0) {
+
+                paint.color =
+                    Color.argb(
+                        130,
+                        255,
+                        170,
+                        20
+                    )
+
+                canvas.drawCircle(
+                    explosionX,
+                    explosionY,
+                    explosionRadius,
+                    paint
+                )
+            }
+
+            if (projectileFlying) {
+
+                paint.color = Color.BLACK
+
+                canvas.drawCircle(
+                    projectileX,
+                    projectileY,
+                    8f,
+                    paint
+                )
+            }
+
+            if (projectileFlying || explosionTimer > 0) {
+                updateGame()
+            }
+        }
+
+        private fun drawAim(
+            canvas: Canvas,
+            x: Float,
+            y: Float
+        ) {
+            val radians =
+                Math.toRadians(aimAngle.toDouble())
+
+            val length = 100f
+
+            val endX =
+                x + cos(radians).toFloat() * length
+
+            val endY =
+                y - sin(radians).toFloat() * length
+
+            paint.color = Color.YELLOW
+            paint.strokeWidth = 7f
+
+            canvas.drawLine(
+                x,
+                y,
+                endX,
+                endY,
+                paint
             )
+
+            paint.strokeWidth = 1f
+        }
+
+        private fun updateGame() {
+
+            val now = System.currentTimeMillis()
+
+            if (now - lastTime < 16L) {
+                return
+            }
+
+            lastTime = now
+
+            if (projectileFlying) {
+
+                projectileX += projectileVX
+                projectileY += projectileVY
+
+                projectileVY += 0.65f
+
+                val ground =
+                    height * 0.70f
+
+                val playerX =
+                    width * 0.20f
+
+                val botX =
+                    width * 0.80f
+
+                val botY =
+                    height * 0.54f
+
+                val playerY =
+                    height * 0.59f
+
+                if (
+                    projectileX < -50f ||
+                    projectileX > width + 50f ||
+                    projectileY > height
+                ) {
+
+                    projectileFlying = false
+                    nextTurn()
+                }
+
+                if (
+                    projectileFlying &&
+                    projectileY >= ground
+                ) {
+
+                    createExplosion(
+                        projectileX,
+                        ground
+                    )
+
+                    projectileFlying = false
+
+                    applyExplosionDamage(
+                        projectileX,
+                        ground,
+                        playerX,
+                        playerY,
+                        botX,
+                        botY
+                    )
+                }
+            }
+
+            if (explosionTimer > 0) {
+
+                explosionTimer--
+
+                explosionRadius += 3f
+
+                if (explosionTimer == 0) {
+                    explosionRadius = 0f
+                    nextTurn()
+                }
+            }
+
+            invalidate()
+        }
+
+        private fun createExplosion(
+            x: Float,
+            y: Float
+        ) {
+            explosionX = x
+            explosionY = y
+            explosionRadius = 10f
+            explosionTimer = 25
+        }
+
+        private fun applyExplosionDamage(
+            x: Float,
+            y: Float,
+            playerX: Float,
+            playerY: Float,
+            botX: Float,
+            botY: Float
+        ) {
+            val damageRadius = 100f
+
+            val distanceToBot =
+                hypot(
+                    x - botX,
+                    y - botY
+                )
+
+            val distanceToPlayer =
+                hypot(
+                    x - playerX,
+                    y - playerY
+                )
+
+            if (distanceToBot < damageRadius) {
+
+                val damage =
+                    max(
+                        5,
+                        (45f *
+                                (1f -
+                                        distanceToBot /
+                                        damageRadius)).toInt()
+                    )
+
+                botHealth =
+                    max(
+                        0,
+                        botHealth - damage
+                    )
+            }
+
+            if (distanceToPlayer < damageRadius) {
+
+                if (!godMode) {
+
+                    val damage =
+                        max(
+                            5,
+                            (35f *
+                                    (1f -
+                                            distanceToPlayer /
+                                            damageRadius)).toInt()
+                        )
+
+                    playerHealth =
+                        max(
+                            0,
+                            playerHealth - damage
+                        )
+                }
+            }
+
+            if (botHealth <= 0) {
+
+                message = "ПОБЕДА!"
+
+                experience += 500
+                rubies += 100
+                fuzz += 250
+
+                save()
+            }
+
+            if (playerHealth <= 0) {
+
+                message = "ПОРАЖЕНИЕ!"
+            }
+        }
+
+        private fun nextTurn() {
+
+            if (botHealth <= 0 || playerHealth <= 0) {
+                return
+            }
+
+            playerTurn = !playerTurn
+
+            message =
+                if (playerTurn) {
+                    "ТВОЙ ХОД"
+                } else {
+                    "ХОД БОТА"
+                }
+
+            if (!playerTurn) {
+
+                postDelayed(
+                    {
+                        botShoot()
+                    },
+                    700
+                )
+            }
+        }
+
+        private fun botShoot() {
+
+            if (screen != "battle") {
+                return
+            }
+
+            if (botHealth <= 0 || playerHealth <= 0) {
+                return
+            }
+
+            val botX =
+                width * 0.80f
+
+            val botY =
+                height * 0.54f
+
+            val targetX =
+                width * 0.20f
+
+            val targetY =
+                height * 0.59f
+
+            val dx =
+                targetX - botX
+
+            val dy =
+                targetY - botY
+
+            val angle =
+                Math.atan2(
+                    -dy.toDouble(),
+                    dx.toDouble()
+                )
+
+            val speed = 17f
+
+            projectileX = botX
+            projectileY = botY
+
+            projectileVX =
+                cos(angle).toFloat() * speed
+
+            projectileVY =
+                -sin(angle).toFloat() * speed
+
+            projectileFlying = true
+
+            invalidate()
+        }
+
+        private fun fire() {
+
+            if (!playerTurn ||
+                projectileFlying ||
+                playerHealth <= 0 ||
+                botHealth <= 0
+            ) {
+                return
+            }
+
+            val playerX =
+                width * 0.20f
+
+            val playerY =
+                height * 0.59f
+
+            val radians =
+                Math.toRadians(
+                    aimAngle.toDouble()
+                )
+
+            val speed =
+                8f + power * 0.18f
+
+            projectileX = playerX
+            projectileY = playerY
+
+            projectileVX =
+                cos(radians).toFloat() * speed
+
+            projectileVY =
+                -sin(radians).toFloat() * speed
+
+            projectileFlying = true
+
+            message = "ВЫСТРЕЛ!"
+
+            invalidate()
         }
 
         private fun drawHealthBar(
@@ -429,7 +847,6 @@
             y: Float,
             health: Int
         ) {
-
             paint.color = Color.RED
 
             canvas.drawRect(
@@ -442,13 +859,17 @@
 
             paint.color = Color.GREEN
 
-            val width =
-                110f * (health.coerceIn(0, 100) / 100f)
+            val barWidth =
+                110f *
+                        (health.coerceIn(
+                            0,
+                            100
+                        ) / 100f)
 
             canvas.drawRect(
                 x,
                 y,
-                x + width,
+                x + barWidth,
                 y + 12f,
                 paint
             )
@@ -459,7 +880,6 @@
             w: Float,
             h: Float
         ) {
-
             paint.color =
                 Color.argb(
                     235,
@@ -468,539 +888,4 @@
                     30
                 )
 
-            canvas.drawRect(
-                0f,
-                0f,
-                w,
-                h,
-                paint
-            )
-
-            text(
-                canvas,
-                "DEV MENU",
-                35f,
-                48f,
-                32f,
-                Color.YELLOW
-            )
-
-            text(
-                canvas,
-                "LOCAL TEST SERVER",
-                35f,
-                78f,
-                17f,
-                Color.WHITE
-            )
-
-            val left = 30f
-            val right = w / 2f + 10f
-
-            val buttonWidth =
-                w / 2f - 45f
-
-            val buttonHeight = 52f
-
-            val rows = floatArrayOf(
-                105f,
-                170f,
-                235f,
-                300f,
-                365f,
-                430f
-            )
-
-            button(
-                canvas,
-                "+1 000 000 РУБИНОВ",
-                left,
-                rows[0],
-                left + buttonWidth,
-                rows[0] + buttonHeight
-            )
-
-            button(
-                canvas,
-                "+1 000 000 ФУЗЗ",
-                right,
-                rows[0],
-                right + buttonWidth,
-                rows[0] + buttonHeight
-            )
-
-            button(
-                canvas,
-                "УРОВЕНЬ 30",
-                left,
-                rows[1],
-                left + buttonWidth,
-                rows[1] + buttonHeight
-            )
-
-            button(
-                canvas,
-                "ОТКРЫТЬ ВСЁ",
-                right,
-                rows[1],
-                right + buttonWidth,
-                rows[1] + buttonHeight
-            )
-
-            button(
-                canvas,
-                if (godMode)
-                    "БЕССМЕРТИЕ: ВКЛ"
-                else
-                    "БЕССМЕРТИЕ: ВЫКЛ",
-                left,
-                rows[2],
-                left + buttonWidth,
-                rows[2] + buttonHeight
-            )
-
-            button(
-                canvas,
-                if (infiniteAmmo)
-                    "БОЕПРИПАСЫ: ВКЛ"
-                else
-                    "БОЕПРИПАСЫ: ВЫКЛ",
-                right,
-                rows[2],
-                right + buttonWidth,
-                rows[2] + buttonHeight
-            )
-
-            button(
-                canvas,
-                if (maxStats)
-                    "ХАРАКТЕРИСТИКИ: MAX"
-                else
-                    "ХАРАКТЕРИСТИКИ: NORMAL",
-                left,
-                rows[3],
-                left + buttonWidth,
-                rows[3] + buttonHeight
-            )
-
-            button(
-                canvas,
-                "ВОССТАНОВИТЬ HP",
-                right,
-                rows[3],
-                right + buttonWidth,
-                rows[3] + buttonHeight
-            )
-
-            button(
-                canvas,
-                "СБРОСИТЬ БОЙ",
-                left,
-                rows[4],
-                left + buttonWidth,
-                rows[4] + buttonHeight
-            )
-
-            button(
-                canvas,
-                "НОВЫЙ ТЕСТ-БОТ",
-                right,
-                rows[4],
-                right + buttonWidth,
-                rows[4] + buttonHeight
-            )
-
-            button(
-                canvas,
-                "ЗАКРЫТЬ",
-                w / 2f - 90f,
-                rows[5],
-                w / 2f + 90f,
-                rows[5] + buttonHeight
-            )
-        }
-
-        private fun text(
-            canvas: Canvas,
-            value: String,
-            x: Float,
-            y: Float,
-            size: Float,
-            color: Int = Color.WHITE
-        ) {
-
-            paint.style = Paint.Style.FILL
-            paint.color = color
-            paint.textSize = size
-            paint.typeface = Typeface.DEFAULT_BOLD
-
-            canvas.drawText(
-                value,
-                x,
-                y,
-                paint
-            )
-        }
-
-        private fun button(
-            canvas: Canvas,
-            label: String,
-            left: Float,
-            top: Float,
-            right: Float,
-            bottom: Float
-        ) {
-
-            paint.style = Paint.Style.FILL
-
-            paint.color =
-                Color.rgb(45, 55, 70)
-
-            canvas.drawRoundRect(
-                left,
-                top,
-                right,
-                bottom,
-                18f,
-                18f,
-                paint
-            )
-
-            text(
-                canvas,
-                label,
-                left + 18f,
-                top + (bottom - top) * 0.65f,
-                21f,
-                Color.WHITE
-            )
-        }
-
-        private fun save() {
-
-            prefs.edit()
-                .putString(
-                    "character",
-                    selectedCharacter
-                )
-                .putInt(
-                    "level",
-                    level
-                )
-                .putLong(
-                    "experience",
-                    experience
-                )
-                .putLong(
-                    "rubies",
-                    rubies
-                )
-                .putLong(
-                    "fuzz",
-                    fuzz
-                )
-                .putBoolean(
-                    "allUnlocked",
-                    allUnlocked
-                )
-                .putBoolean(
-                    "godMode",
-                    godMode
-                )
-                .putBoolean(
-                    "infiniteAmmo",
-                    infiniteAmmo
-                )
-                .putBoolean(
-                    "maxStats",
-                    maxStats
-                )
-                .apply()
-        }
-
-        override fun onTouchEvent(
-            event: MotionEvent
-        ): Boolean {
-
-            if (event.action != MotionEvent.ACTION_UP) {
-                return true
-            }
-
-            val x = event.x
-            val y = event.y
-
-            val w = width.toFloat()
-            val h = height.toFloat()
-
-            /*
-             * DEV MENU
-             */
-
-            if (devMenu) {
-
-                val left = 30f
-                val right = w / 2f + 10f
-
-                val buttonWidth =
-                    w / 2f - 45f
-
-                val buttonHeight = 52f
-
-                val rows = floatArrayOf(
-                    105f,
-                    170f,
-                    235f,
-                    300f,
-                    365f,
-                    430f
-                )
-
-                when {
-
-                    // + рубины
-
-                    y >= rows[0] &&
-                            y <= rows[0] + buttonHeight &&
-                            x >= left &&
-                            x <= left + buttonWidth -> {
-
-                        rubies += 1_000_000L
-                    }
-
-                    // + фузз
-
-                    y >= rows[0] &&
-                            y <= rows[0] + buttonHeight &&
-                            x >= right &&
-                            x <= right + buttonWidth -> {
-
-                        fuzz += 1_000_000L
-                    }
-
-                    // уровень
-
-                    y >= rows[1] &&
-                            y <= rows[1] + buttonHeight &&
-                            x >= left &&
-                            x <= left + buttonWidth -> {
-
-                        level = 30
-                        experience = 999999L
-                    }
-
-                    // открыть всё
-
-                    y >= rows[1] &&
-                            y <= rows[1] + buttonHeight &&
-                            x >= right &&
-                            x <= right + buttonWidth -> {
-
-                        allUnlocked = true
-                    }
-
-                    // бессмертие
-
-                    y >= rows[2] &&
-                            y <= rows[2] + buttonHeight &&
-                            x >= left &&
-                            x <= left + buttonWidth -> {
-
-                        godMode = !godMode
-                    }
-
-                    // бесконечные патроны
-
-                    y >= rows[2] &&
-                            y <= rows[2] + buttonHeight &&
-                            x >= right &&
-                            x <= right + buttonWidth -> {
-
-                        infiniteAmmo = !infiniteAmmo
-                    }
-
-                    // характеристики
-
-                    y >= rows[3] &&
-                            y <= rows[3] + buttonHeight &&
-                            x >= left &&
-                            x <= left + buttonWidth -> {
-
-                        maxStats = !maxStats
-                    }
-
-                    // здоровье
-
-                    y >= rows[3] &&
-                            y <= rows[3] + buttonHeight &&
-                            x >= right &&
-                            x <= right + buttonWidth -> {
-
-                        playerHealth = 100
-                        botHealth = 100
-                    }
-
-                    // сброс боя
-
-                    y >= rows[4] &&
-                            y <= rows[4] + buttonHeight &&
-                            x >= left &&
-                            x <= left + buttonWidth -> {
-
-                        playerHealth = 100
-                        botHealth = 100
-                    }
-
-                    // новый бот
-
-                    y >= rows[4] &&
-                            y <= rows[4] + buttonHeight &&
-                            x >= right &&
-                            x <= right + buttonWidth -> {
-
-                        botNumber++
-                        playerHealth = 100
-                        botHealth = 100
-                    }
-
-                    // закрыть
-
-                    y >= rows[5] &&
-                            y <= rows[5] + buttonHeight -> {
-
-                        devMenu = false
-                    }
-                }
-
-                save()
-                invalidate()
-
-                return true
-            }
-
-            /*
-             * ОСНОВНЫЕ ЭКРАНЫ
-             */
-
-            when (screen) {
-
-                "menu" -> {
-
-                    // DEV MENU
-
-                    if (
-                        x > w - 230f &&
-                        y < 115f
-                    ) {
-
-                        devMenu = true
-                    }
-
-                    // Начать бой
-
-                    else if (
-                        y >= 230f &&
-                        y <= 310f
-                    ) {
-
-                        playerHealth = 100
-                        botHealth = 100
-
-                        screen = "battle"
-                    }
-
-                    // Персонажи
-
-                    else if (
-                        y >= 310f &&
-                        y <= 390f
-                    ) {
-
-                        screen = "characters"
-                    }
-                }
-
-                "characters" -> {
-
-                    // Назад
-
-                    if (
-                        y > h - 90f
-                    ) {
-
-                        screen = "menu"
-                    }
-
-                    // Выбор персонажа
-
-                    else if (
-                        y >= 85f &&
-                        y < 300f
-                    ) {
-
-                        val cellWidth =
-                            (w - 90f) / 4f
-
-                        val column =
-                            min(
-                                3,
-                                max(
-                                    0,
-                                    ((x - 25f) / cellWidth).toInt()
-                                )
-                            )
-
-                        val row =
-                            min(
-                                1,
-                                max(
-                                    0,
-                                    ((y - 85f) / 105f).toInt()
-                                )
-                            )
-
-                        val index =
-                            row * 4 + column
-
-                        if (
-                            index >= 0 &&
-                            index < characters.size
-                        ) {
-
-                            selectedCharacter =
-                                characters[index]
-
-                            save()
-                        }
-                    }
-                }
-
-                "battle" -> {
-
-                    // DEV в бою
-
-                    if (
-                        x > w - 180f &&
-                        y > h - 90f
-                    ) {
-
-                        devMenu = true
-                    }
-
-                    // Назад
-
-                    else if (
-                        x < 200f &&
-                        y > h - 90f
-                    ) {
-
-                        screen = "menu"
-                    }
-                }
-            }
-
-            invalidate()
-
-            return true
-        }
-    }
-}
+            canvas.drawR
