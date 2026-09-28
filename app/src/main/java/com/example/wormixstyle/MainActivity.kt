@@ -1,5 +1,4 @@
 package com.example.wormixstyle
-
 import android.app.Activity
 import android.content.Context
 import android.graphics.Canvas
@@ -9,14 +8,13 @@ import android.graphics.Typeface
 import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
+import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
-
 class MainActivity : Activity() {
-
 override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(GameView(this))
@@ -33,6 +31,7 @@ class GameView(context: Context) : View(context) {
     private var devMenu = false
 
     private var selectedCharacter = 0
+
     private var level = prefs.getInt("level", 1)
     private var experience = prefs.getInt("experience", 0)
     private var rubies = prefs.getInt("rubies", 100)
@@ -65,6 +64,32 @@ class GameView(context: Context) : View(context) {
 
     private var message = "ТВОЙ ХОД"
     private var gameOver = false
+
+    private var selectedWeapon = 0
+
+    private val weaponNames = arrayOf(
+        "ОБЫЧНЫЙ",
+        "РАКЕТА",
+        "БОМБА"
+    )
+
+    private val weaponDamage = intArrayOf(
+        30,
+        50,
+        70
+    )
+
+    private val weaponRadius = floatArrayOf(
+        45f,
+        75f,
+        110f
+    )
+
+    private val weaponCost = intArrayOf(
+        0,
+        10,
+        20
+    )
 
     private val gravity = 0.55f
 
@@ -114,8 +139,25 @@ class GameView(context: Context) : View(context) {
     private fun drawMenu(canvas: Canvas) {
         canvas.drawColor(Color.rgb(20, 25, 35))
 
-        text(canvas, "WORM ARENA", width / 2f, 90f, 42f, Color.WHITE, true)
-        text(canvas, "OFFLINE TEST SERVER", width / 2f, 125f, 18f, Color.LTGRAY, true)
+        text(
+            canvas,
+            "WORM ARENA",
+            width / 2f,
+            90f,
+            42f,
+            Color.WHITE,
+            true
+        )
+
+        text(
+            canvas,
+            "OFFLINE TEST SERVER",
+            width / 2f,
+            125f,
+            18f,
+            Color.LTGRAY,
+            true
+        )
 
         button(canvas, 100f, 170f, width - 100f, 240f, "БОЙ")
         button(canvas, 100f, 260f, width - 100f, 330f, "ПЕРСОНАЖИ")
@@ -123,7 +165,7 @@ class GameView(context: Context) : View(context) {
 
         text(
             canvas,
-            "Уровень: $level     Рубины: $rubies     Пух: $fuzz",
+            "Уровень: $level     Рубины: $rubies     Фузы: $fuzz",
             width / 2f,
             height - 45f,
             20f,
@@ -135,7 +177,15 @@ class GameView(context: Context) : View(context) {
     private fun drawCharacters(canvas: Canvas) {
         canvas.drawColor(Color.rgb(18, 22, 30))
 
-        text(canvas, "ПЕРСОНАЖИ", width / 2f, 55f, 32f, Color.WHITE, true)
+        text(
+            canvas,
+            "ПЕРСОНАЖИ",
+            width / 2f,
+            55f,
+            32f,
+            Color.WHITE,
+            true
+        )
 
         val cellW = width / 4f
         val cellH = 150f
@@ -150,10 +200,21 @@ class GameView(context: Context) : View(context) {
             val bottom = top + 120f
 
             paint.color =
-                if (i == selectedCharacter) Color.rgb(40, 110, 170)
-                else Color.rgb(45, 50, 60)
+                if (i == selectedCharacter) {
+                    Color.rgb(40, 110, 170)
+                } else {
+                    Color.rgb(45, 50, 60)
+                }
 
-            canvas.drawRoundRect(left, top, right, bottom, 18f, 18f, paint)
+            canvas.drawRoundRect(
+                left,
+                top,
+                right,
+                bottom,
+                18f,
+                18f,
+                paint
+            )
 
             drawCharacter(
                 canvas,
@@ -173,7 +234,14 @@ class GameView(context: Context) : View(context) {
             )
         }
 
-        button(canvas, 30f, height - 65f, 220f, height - 15f, "НАЗАД")
+        button(
+            canvas,
+            30f,
+            height - 65f,
+            220f,
+            height - 15f,
+            "НАЗАД"
+        )
     }
 
     private fun drawBattle(canvas: Canvas) {
@@ -182,11 +250,28 @@ class GameView(context: Context) : View(context) {
         val groundY = height * 0.72f
 
         paint.color = Color.rgb(70, 150, 70)
-        canvas.drawRect(0f, groundY, width.toFloat(), height.toFloat(), paint)
+        canvas.drawRect(
+            0f,
+            groundY,
+            width.toFloat(),
+            height.toFloat(),
+            paint
+        )
 
         paint.color = Color.rgb(95, 175, 75)
-        canvas.drawCircle(width * 0.25f, groundY + 60f, 130f, paint)
-        canvas.drawCircle(width * 0.70f, groundY + 70f, 160f, paint)
+        canvas.drawCircle(
+            width * 0.25f,
+            groundY + 60f,
+            130f,
+            paint
+        )
+
+        canvas.drawCircle(
+            width * 0.70f,
+            groundY + 70f,
+            160f,
+            paint
+        )
 
         drawCharacter(
             canvas,
@@ -232,16 +317,40 @@ class GameView(context: Context) : View(context) {
             true
         )
 
+        text(
+            canvas,
+            "Оружие: ${weaponNames[selectedWeapon]}   " +
+                    "Урон: ${weaponDamage[selectedWeapon]}   " +
+                    "Фузы: $fuzz",
+            width / 2f,
+            72f,
+            16f,
+            Color.WHITE,
+            true
+        )
+
         if (projectileFlying) {
             paint.color = Color.BLACK
-            canvas.drawCircle(projectileX, projectileY, 9f, paint)
+            canvas.drawCircle(
+                projectileX,
+                projectileY,
+                9f,
+                paint
+            )
 
             paint.color = Color.YELLOW
-            canvas.drawCircle(projectileX, projectileY, 4f, paint)
+            canvas.drawCircle(
+                projectileX,
+                projectileY,
+                4f,
+                paint
+            )
         }
 
         if (explosionTimer > 0) {
-            val radius = 25f + (30 - explosionTimer) * 3f
+            val radius =
+                weaponRadius[selectedWeapon] *
+                        (1f + (30 - explosionTimer) / 30f)
 
             paint.color = Color.argb(
                 min(220, explosionTimer * 8),
@@ -258,12 +367,18 @@ class GameView(context: Context) : View(context) {
             )
         }
 
-        if (!projectileFlying && explosionTimer == 0 && !gameOver && playerTurn) {
+        if (
+            !projectileFlying &&
+            explosionTimer == 0 &&
+            !gameOver &&
+            playerTurn
+        ) {
             drawAim(canvas)
         }
 
         if (gameOver) {
             paint.color = Color.argb(210, 0, 0, 0)
+
             canvas.drawRect(
                 0f,
                 0f,
@@ -273,7 +388,11 @@ class GameView(context: Context) : View(context) {
             )
 
             val result =
-                if (playerHealth > 0) "ПОБЕДА!" else "ПОРАЖЕНИЕ"
+                if (playerHealth > 0) {
+                    "ПОБЕДА!"
+                } else {
+                    "ПОРАЖЕНИЕ"
+                }
 
             text(
                 canvas,
@@ -303,6 +422,15 @@ class GameView(context: Context) : View(context) {
                 "МЕНЮ"
             )
 
+            button(
+                canvas,
+                width - 190f,
+                height - 65f,
+                width - 20f,
+                height - 15f,
+                "ОРУЖИЕ"
+            )
+
             text(
                 canvas,
                 "Угол: ${aimAngle.toInt()}°   Сила: ${power.toInt()}",
@@ -320,17 +448,35 @@ class GameView(context: Context) : View(context) {
         val sy = height * 0.72f - 35f
 
         val length = 80f + power * 1.2f
-        val rad = Math.toRadians(aimAngle.toDouble())
 
-        val ex = sx + cos(rad).toFloat() * length
-        val ey = sy - sin(rad).toFloat() * length
+        val rad =
+            Math.toRadians(aimAngle.toDouble())
+
+        val ex =
+            sx + cos(rad).toFloat() * length
+
+        val ey =
+            sy - sin(rad).toFloat() * length
 
         paint.color = Color.WHITE
         paint.strokeWidth = 5f
-        canvas.drawLine(sx, sy, ex, ey, paint)
+
+        canvas.drawLine(
+            sx,
+            sy,
+            ex,
+            ey,
+            paint
+        )
 
         paint.color = Color.YELLOW
-        canvas.drawCircle(ex, ey, 7f, paint)
+
+        canvas.drawCircle(
+            ex,
+            ey,
+            7f,
+            paint
+        )
 
         paint.strokeWidth = 1f
     }
@@ -345,14 +491,28 @@ class GameView(context: Context) : View(context) {
         label: String
     ) {
         paint.color = Color.DKGRAY
-        canvas.drawRoundRect(left, top, right, bottom, 8f, 8f, paint)
 
-        val ratio = max(0, hp) / 100f
+        canvas.drawRoundRect(
+            left,
+            top,
+            right,
+            bottom,
+            8f,
+            8f,
+            paint
+        )
+
+        val ratio =
+            max(0, hp) / 100f
 
         paint.color =
-            if (hp > 50) Color.GREEN
-            else if (hp > 20) Color.YELLOW
-            else Color.RED
+            if (hp > 50) {
+                Color.GREEN
+            } else if (hp > 20) {
+                Color.YELLOW
+            } else {
+                Color.RED
+            }
 
         canvas.drawRoundRect(
             left,
@@ -382,14 +542,33 @@ class GameView(context: Context) : View(context) {
         index: Int
     ) {
         paint.color = characterColors[index]
-        canvas.drawCircle(x, y, 30f, paint)
+
+        canvas.drawCircle(
+            x,
+            y,
+            30f,
+            paint
+        )
 
         paint.color = Color.BLACK
-        canvas.drawCircle(x - 10f, y - 7f, 4f, paint)
-        canvas.drawCircle(x + 10f, y - 7f, 4f, paint)
+
+        canvas.drawCircle(
+            x - 10f,
+            y - 7f,
+            4f,
+            paint
+        )
+
+        canvas.drawCircle(
+            x + 10f,
+            y - 7f,
+            4f,
+            paint
+        )
 
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = 3f
+
         canvas.drawArc(
             x - 12f,
             y - 2f,
@@ -400,11 +579,18 @@ class GameView(context: Context) : View(context) {
             false,
             paint
         )
+
         paint.style = Paint.Style.FILL
     }
 
     private fun drawDevMenu(canvas: Canvas) {
-        paint.color = Color.argb(235, 10, 10, 15)
+        paint.color = Color.argb(
+            235,
+            10,
+            10,
+            15
+        )
+
         canvas.drawRect(
             30f,
             30f,
@@ -423,24 +609,93 @@ class GameView(context: Context) : View(context) {
             true
         )
 
-        button(canvas, 60f, 100f, width / 2f - 20f, 155f, "+1 000 000 РУБИНОВ")
-        button(canvas, width / 2f + 20f, 100f, width - 60f, 155f, "+1 000 000 ПУХА")
+        button(
+            canvas,
+            60f,
+            100f,
+            width / 2f - 20f,
+            155f,
+            "+1 000 000 РУБИНОВ"
+        )
 
-        button(canvas, 60f, 170f, width / 2f - 20f, 225f, "УРОВЕНЬ 30")
-        button(canvas, width / 2f + 20f, 170f, width - 60f, 225f, "РАЗБЛОКИРОВАТЬ ВСЁ")
+        button(
+            canvas,
+            width / 2f + 20f,
+            100f,
+            width - 60f,
+            155f,
+            "+1 000 000 ФУЗОВ"
+        )
 
-        button(canvas, 60f, 240f, width / 2f - 20f, 295f, "БЕССМЕРТИЕ")
-        button(canvas, width / 2f + 20f, 240f, width - 60f, 295f, "БЕСКОНЕЧНЫЙ БОЕЗАПАС")
+        button(
+            canvas,
+            60f,
+            170f,
+            width / 2f - 20f,
+            225f,
+            "УРОВЕНЬ 30"
+        )
 
-        button(canvas, 60f, 310f, width / 2f - 20f, 365f, "МАКС. ХАРАКТЕРИСТИКИ")
-        button(canvas, width / 2f + 20f, 310f, width - 60f, 365f, "НОВЫЙ БОТ")
+        button(
+            canvas,
+            width / 2f + 20f,
+            170f,
+            width - 60f,
+            225f,
+            "РАЗБЛОКИРОВАТЬ ВСЁ"
+        )
+
+        button(
+            canvas,
+            60f,
+            240f,
+            width / 2f - 20f,
+            295f,
+            "БЕССМЕРТИЕ"
+        )
+
+        button(
+            canvas,
+            width / 2f + 20f,
+            240f,
+            width - 60f,
+            295f,
+            "БЕСКОНЕЧНЫЕ ФУЗЫ"
+        )
+
+        button(
+            canvas,
+            60f,
+            310f,
+            width / 2f - 20f,
+            365f,
+            "МАКС. ХАРАКТЕРИСТИКИ"
+        )
+
+        button(
+            canvas,
+            width / 2f + 20f,
+            310f,
+            width - 60f,
+            365f,
+            "НОВЫЙ БОТ"
+        )
 
         text(
             canvas,
-            "Бессмертие: ${if (godMode) "ВКЛ" else "ВЫКЛ"}     " +
-                    "Бесконечные снаряды: ${if (infiniteAmmo) "ВКЛ" else "ВЫКЛ"}",
+            "Бессмертие: ${if (godMode) "ВКЛ" else "ВЫКЛ"}",
             width / 2f,
             410f,
+            16f,
+            Color.LTGRAY,
+            true
+        )
+
+        text(
+            canvas,
+            "Бесконечные фузы: ${if (infiniteAmmo) "ВКЛ" else "ВЫКЛ"}",
+            width / 2f,
+            435f,
             16f,
             Color.LTGRAY,
             true
@@ -469,61 +724,104 @@ class GameView(context: Context) : View(context) {
                 projectileX > width + 50f ||
                 projectileY > groundY
             ) {
-                projectileX = projectileX.coerceIn(10f, width - 10f)
-                projectileY = min(projectileY, groundY)
+                projectileX =
+                    projectileX.coerceIn(
+                        10f,
+                        width - 10f
+                    )
+
+                projectileY =
+                    min(projectileY, groundY)
 
                 projectileFlying = false
-                createExplosion(projectileX, projectileY)
+
+                createExplosion(
+                    projectileX,
+                    projectileY
+                )
             }
         } else if (explosionTimer > 0) {
             explosionTimer--
 
-            if (explosionTimer == 0) {
-                if (!gameOver) {
-                    nextTurn()
-                }
+            if (explosionTimer == 0 && !gameOver) {
+                nextTurn()
             }
         }
     }
 
-    private fun createExplosion(x: Float, y: Float) {
+    private fun createExplosion(
+        x: Float,
+        y: Float
+    ) {
         explosionX = x
         explosionY = y
         explosionTimer = 30
 
-        applyExplosionDamage(x, y)
+        applyExplosionDamage(
+            x,
+            y
+        )
     }
 
-    private fun applyExplosionDamage(x: Float, y: Float) {
+    private fun applyExplosionDamage(
+        x: Float,
+        y: Float
+    ) {
         val groundY = height * 0.72f
 
         val targetX =
-            if (projectileOwner == 0) width * 0.82f
-            else width * 0.18f
+            if (projectileOwner == 0) {
+                width * 0.82f
+            } else {
+                width * 0.18f
+            }
 
-        val targetY = groundY - 35f
+        val targetY =
+            groundY - 35f
 
-        val distance = hypot(
-            x - targetX,
-            y - targetY
-        )
+        val distance =
+            hypot(
+                x - targetX,
+                y - targetY
+            )
 
-        val damage = when {
-            distance < 45f -> 45
-            distance < 90f -> 30
-            distance < 140f -> 15
-            else -> 5
-        }
+        val radius =
+            weaponRadius[selectedWeapon]
+
+        val damage =
+            when {
+                distance < radius * 0.35f ->
+                    weaponDamage[selectedWeapon]
+
+                distance < radius * 0.65f ->
+                    (weaponDamage[selectedWeapon] * 0.7f).toInt()
+
+                distance < radius ->
+                    (weaponDamage[selectedWeapon] * 0.35f).toInt()
+
+                else -> 0
+            }
 
         if (projectileOwner == 0) {
-            botHealth = max(0, botHealth - damage)
+            botHealth =
+                max(
+                    0,
+                    botHealth - damage
+                )
         } else {
             if (!godMode) {
-                playerHealth = max(0, playerHealth - damage)
+                playerHealth =
+                    max(
+                        0,
+                        playerHealth - damage
+                    )
             }
         }
 
-        if (botHealth <= 0 || playerHealth <= 0) {
+        if (
+            botHealth <= 0 ||
+            playerHealth <= 0
+        ) {
             finishBattle()
         }
     }
@@ -536,7 +834,10 @@ class GameView(context: Context) : View(context) {
             message = "ХОД БОТА"
 
             postDelayed({
-                if (!gameOver && !projectileFlying) {
+                if (
+                    !gameOver &&
+                    !projectileFlying
+                ) {
                     botShoot()
                 }
             }, 650)
@@ -549,26 +850,63 @@ class GameView(context: Context) : View(context) {
     }
 
     private fun fire() {
-        if (!playerTurn || projectileFlying || explosionTimer > 0 || gameOver) {
+        if (
+            !playerTurn ||
+            projectileFlying ||
+            explosionTimer > 0 ||
+            gameOver
+        ) {
             return
         }
 
-        val startX = width * 0.18f
-        val startY = height * 0.72f - 35f
+        val cost =
+            weaponCost[selectedWeapon]
 
-        val rad = Math.toRadians(aimAngle.toDouble())
+        if (
+            selectedWeapon != 0 &&
+            fuzz < cost
+        ) {
+            message = "НЕ ХВАТАЕТ ФУЗОВ"
+            invalidate()
+            return
+        }
 
-        val speed = 5f + power * 0.11f
+        if (
+            selectedWeapon != 0 &&
+            !infiniteAmmo
+        ) {
+            fuzz -= cost
+            save()
+        }
+
+        val startX =
+            width * 0.18f
+
+        val startY =
+            height * 0.72f - 35f
+
+        val rad =
+            Math.toRadians(
+                aimAngle.toDouble()
+            )
+
+        val speed =
+            5f + power * 0.11f
 
         projectileX = startX
         projectileY = startY
 
-        projectileVX = cos(rad).toFloat() * speed
-        projectileVY = -sin(rad).toFloat() * speed
+        projectileVX =
+            cos(rad).toFloat() * speed
+
+        projectileVY =
+            -sin(rad).toFloat() * speed
 
         projectileOwner = 0
         projectileFlying = true
-        message = "ПОЛЁТ!"
+
+        message =
+            "ПОЛЁТ: ${weaponNames[selectedWeapon]}"
 
         invalidate()
     }
@@ -576,29 +914,55 @@ class GameView(context: Context) : View(context) {
     private fun botShoot() {
         if (gameOver) return
 
-        val startX = width * 0.82f
-        val startY = height * 0.72f - 35f
+        val startX =
+            width * 0.82f
 
-        val targetX = width * 0.18f
-        val targetY = startY
+        val startY =
+            height * 0.72f - 35f
 
-        val dx = targetX - startX
-        val dy = targetY - startY
+        val targetX =
+            width * 0.18f
+
+        val targetY =
+            startY
+
+        val dx =
+            targetX - startX
+
+        val dy =
+            targetY - startY
 
         val angle = 145f
-        val rad = Math.toRadians(angle.toDouble())
 
-        val distance = hypot(dx, dy)
-        val speed = min(14f, max(8f, distance / 60f))
+        val rad =
+            Math.toRadians(
+                angle.toDouble()
+            )
+
+        val distance =
+            hypot(dx, dy)
+
+        val speed =
+            min(
+                14f,
+                max(
+                    8f,
+                    distance / 60f
+                )
+            )
 
         projectileX = startX
         projectileY = startY
 
-        projectileVX = cos(rad).toFloat() * speed
-        projectileVY = -sin(rad).toFloat() * speed
+        projectileVX =
+            cos(rad).toFloat() * speed
+
+        projectileVY =
+            -sin(rad).toFloat() * speed
 
         projectileOwner = 1
         projectileFlying = true
+
         message = "БОТ СТРЕЛЯЕТ"
 
         invalidate()
@@ -611,6 +975,7 @@ class GameView(context: Context) : View(context) {
 
         if (playerHealth > 0) {
             message = "ПОБЕДА!"
+
             rubies += 50
             fuzz += 100
             experience += 100
@@ -628,22 +993,58 @@ class GameView(context: Context) : View(context) {
 
     private fun newBattle() {
         screen = 2
-        playerHealth = if (maxStats) 200 else 100
+
+        playerHealth =
+            if (maxStats) 200 else 100
+
         botHealth = 100
+
         playerTurn = true
         projectileFlying = false
         explosionTimer = 0
         gameOver = false
+
         botNumber++
+
         message = "ТВОЙ ХОД"
+
         invalidate()
     }
 
-    override fun onTouchEvent(event: MotionEvent): Boolean {
+    private fun cycleWeapon() {
+        if (
+            projectileFlying ||
+            explosionTimer > 0 ||
+            gameOver ||
+            !playerTurn
+        ) {
+            return
+        }
+
+        selectedWeapon++
+
+        if (
+            selectedWeapon >= weaponNames.size
+        ) {
+            selectedWeapon = 0
+        }
+
+        message =
+            "ВЫБРАНО: ${weaponNames[selectedWeapon]}"
+
+        invalidate()
+    }
+
+    override fun onTouchEvent(
+        event: MotionEvent
+    ): Boolean {
         val x = event.x
         val y = event.y
 
-        if (event.action == MotionEvent.ACTION_DOWN) {
+        if (
+            event.action ==
+            MotionEvent.ACTION_DOWN
+        ) {
 
             if (devMenu) {
                 handleDevTouch(x, y)
@@ -692,50 +1093,92 @@ class GameView(context: Context) : View(context) {
                     invalidate()
                     return true
                 }
+
+                if (
+                    x >= width - 190f &&
+                    y >= height - 65f
+                ) {
+                    cycleWeapon()
+                    return true
+                }
             }
         }
 
-        if (screen == 2 &&
+        if (
+            screen == 2 &&
             !devMenu &&
             !gameOver &&
             playerTurn &&
             !projectileFlying &&
             explosionTimer == 0
         ) {
-            if (event.action == MotionEvent.ACTION_MOVE) {
-                val startX = width * 0.18f
-                val startY = height * 0.72f - 35f
+            if (
+                event.action ==
+                MotionEvent.ACTION_MOVE
+            ) {
+                val startX =
+                    width * 0.18f
 
-                val dx = x - startX
-                val dy = startY - y
+                val startY =
+                    height * 0.72f - 35f
+
+                val dx =
+                    x - startX
+
+                val dy =
+                    startY - y
 
                 if (dx > 0f) {
                     var angle =
                         Math.toDegrees(
-                            kotlin.math.atan2(
+                            atan2(
                                 dy.toDouble(),
                                 dx.toDouble()
                             )
                         ).toFloat()
 
-                    angle = angle.coerceIn(5f, 85f)
+                    angle =
+                        angle.coerceIn(
+                            5f,
+                            85f
+                        )
 
                     val distance =
-                        hypot(dx, dy).coerceIn(20f, 150f)
+                        hypot(
+                            dx,
+                            dy
+                        ).coerceIn(
+                            20f,
+                            150f
+                        )
 
                     aimAngle = angle
+
                     power =
-                        ((distance - 20f) / 130f * 100f)
-                            .coerceIn(20f, 100f)
+                        (
+                            (distance - 20f) /
+                                    130f *
+                                    100f
+                            ).coerceIn(
+                                20f,
+                                100f
+                            )
 
                     invalidate()
                 }
             }
 
-            if (event.action == MotionEvent.ACTION_UP) {
-                val startX = width * 0.18f
+            if (
+                event.action ==
+                MotionEvent.ACTION_UP
+            ) {
+                val startX =
+                    width * 0.18f
 
-                if (x > startX + 40f && y < height - 80f) {
+                if (
+                    x > startX + 40f &&
+                    y < height - 80f
+                ) {
                     fire()
                 }
             }
@@ -744,20 +1187,37 @@ class GameView(context: Context) : View(context) {
         return true
     }
 
-    private fun handleCharacterTouch(x: Float, y: Float) {
-        val cellW = width / 4f
+    private fun handleCharacterTouch(
+        x: Float,
+        y: Float
+    ) {
+        val cellW =
+            width / 4f
+
         val cellH = 150f
 
         for (i in characters.indices) {
             val col = i % 4
             val row = i / 4
 
-            val left = col * cellW + 15f
-            val top = row * cellH + 80f
-            val right = left + cellW - 30f
-            val bottom = top + 120f
+            val left =
+                col * cellW + 15f
 
-            if (x >= left && x <= right && y >= top && y <= bottom) {
+            val top =
+                row * cellH + 80f
+
+            val right =
+                left + cellW - 30f
+
+            val bottom =
+                top + 120f
+
+            if (
+                x >= left &&
+                x <= right &&
+                y >= top &&
+                y <= bottom
+            ) {
                 selectedCharacter = i
                 invalidate()
                 return
@@ -770,13 +1230,17 @@ class GameView(context: Context) : View(context) {
         }
     }
 
-    private fun handleDevTouch(x: Float, y: Float) {
+    private fun handleDevTouch(
+        x: Float,
+        y: Float
+    ) {
         if (y in 100f..155f) {
             if (x < width / 2f) {
                 rubies += 1_000_000
             } else {
                 fuzz += 1_000_000
             }
+
             save()
         } else if (y in 170f..225f) {
             if (x < width / 2f) {
@@ -784,107 +1248,145 @@ class GameView(context: Context) : View(context) {
             } else {
                 allUnlocked = true
             }
+
             save()
         } else if (y in 240f..295f) {
-if (x < width / 2f) {
-godMode = !godMode
-} else {
-infiniteAmmo = !infiniteAmmo
-}
-save()
-} else if (y in 310f..365f) {
-if (x < width / 2f) {
-maxStats = true
-} else {
-botNumber++
-}
-save()
-} else if (y >= height - 100f) {
-devMenu = false
-}
+            if (x < width / 2f) {
+                godMode = !godMode
+            } else {
+                infiniteAmmo = !infiniteAmmo
+            }
 
-invalidate()
-}
+            save()
+        } else if (y in 310f..365f) {
+            if (x < width / 2f) {
+                maxStats = true
+            } else {
+                botNumber++
+            }
 
-private fun text(
-canvas: Canvas,
-value: String,
-x: Float,
-y: Float,
-size: Float,
-color: Int,
-bold: Boolean = false
-) {
-paint.color = color
-paint.textSize = size
-paint.textAlign = Paint.Align.CENTER
-paint.typeface =
-if (bold) Typeface.DEFAULT_BOLD
-else Typeface.DEFAULT
+            save()
+        } else if (y >= height - 100f) {
+            devMenu = false
+        }
 
-canvas.drawText(value, x, y, paint)
+        invalidate()
+    }
 
-}
+    private fun text(
+        canvas: Canvas,
+        value: String,
+        x: Float,
+        y: Float,
+        size: Float,
+        color: Int,
+        bold: Boolean = false
+    ) {
+        paint.color = color
+        paint.textSize = size
+        paint.textAlign = Paint.Align.CENTER
 
-private fun button(
-canvas: Canvas,
-left: Float,
-top: Float,
-right: Float,
-bottom: Float,
-label: String
-) {
-paint.color = Color.rgb(45, 55, 70)
+        paint.typeface =
+            if (bold) {
+                Typeface.DEFAULT_BOLD
+            } else {
+                Typeface.DEFAULT
+            }
 
-canvas.drawRoundRect(
-    left,
-    top,
-    right,
-    bottom,
-    14f,
-    14f,
-    paint
-)
+        canvas.drawText(
+            value,
+            x,
+            y,
+            paint
+        )
+    }
 
-paint.style = Paint.Style.STROKE
-paint.strokeWidth = 2f
-paint.color = Color.rgb(100, 170, 220)
+    private fun button(
+        canvas: Canvas,
+        left: Float,
+        top: Float,
+        right: Float,
+        bottom: Float,
+        label: String
+    ) {
+        paint.color =
+            Color.rgb(45, 55, 70)
 
-canvas.drawRoundRect(
-    left,
-    top,
-    right,
-    bottom,
-    14f,
-    14f,
-    paint
-)
+        canvas.drawRoundRect(
+            left,
+            top,
+            right,
+            bottom,
+            14f,
+            14f,
+            paint
+        )
 
-paint.style = Paint.Style.FILL
+        paint.style =
+            Paint.Style.STROKE
 
-text(
-    canvas,
-    label,
-    (left + right) / 2f,
-    (top + bottom) / 2f + 7f,
-    17f,
-    Color.WHITE,
-    true
-)
+        paint.strokeWidth = 2f
+        paint.color =
+            Color.rgb(100, 170, 220)
 
-}
+        canvas.drawRoundRect(
+            left,
+            top,
+            right,
+            bottom,
+            14f,
+            14f,
+            paint
+        )
 
-private fun save() {
-prefs.edit()
-.putInt("level", level)
-.putInt("experience", experience)
-.putInt("rubies", rubies)
-.putInt("fuzz", fuzz)
-.putBoolean("allUnlocked", allUnlocked)
-.putBoolean("godMode", godMode)
-.putBoolean("infiniteAmmo", infiniteAmmo)
-.putBoolean("maxStats", maxStats)
-.apply()
-}
-}
+        paint.style =
+            Paint.Style.FILL
+
+        text(
+            canvas,
+            label,
+            (left + right) / 2f,
+            (top + bottom) / 2f + 7f,
+            17f,
+            Color.WHITE,
+            true
+        )
+    }
+
+    private fun save() {
+        prefs.edit()
+            .putInt(
+                "level",
+                level
+            )
+            .putInt(
+                "experience",
+                experience
+            )
+            .putInt(
+                "rubies",
+                rubies
+            )
+            .putInt(
+                "fuzz",
+                fuzz
+            )
+            .putBoolean(
+                "allUnlocked",
+                allUnlocked
+            )
+            .putBoolean(
+                "godMode",
+                godMode
+            )
+            .putBoolean(
+                "infiniteAmmo",
+                infiniteAmmo
+            )
+            .putBoolean(
+                "maxStats",
+                maxStats
+            )
+            .apply()
+    }
 }
