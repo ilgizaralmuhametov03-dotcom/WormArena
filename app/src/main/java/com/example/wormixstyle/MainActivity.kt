@@ -1389,4 +1389,5 @@ class GameView(context: Context) : View(context) {
             )
             .apply()
     }
+    }
 }
